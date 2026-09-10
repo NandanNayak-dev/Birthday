@@ -7,13 +7,20 @@ const progressBar = document.getElementById("progressBar");
 const typingTitle = document.getElementById("typingTitle");
 const balloonField = document.getElementById("balloonField");
 const confettiStrip = document.getElementById("confettiStrip");
-const surpriseBtn = document.getElementById("surpriseBtn");
+const giftBox = document.getElementById("giftBox");
+const giftWrap = document.getElementById("giftWrap");
 const celebrateAgain = document.getElementById("celebrateAgain");
+const shareBtn = document.getElementById("shareBtn");
 const musicToggle = document.getElementById("musicToggle");
 const musicIcon = document.getElementById("musicIcon");
 const wishModal = document.getElementById("wishModal");
 const modalClose = document.getElementById("modalClose");
 const countdownMessage = document.getElementById("countdownMessage");
+const lightbox = document.getElementById("lightbox");
+const lightboxClose = document.getElementById("lightboxClose");
+const galleryPhoto = document.getElementById("galleryPhoto");
+const sideNav = document.getElementById("sideNav");
+const modalConfetti = document.getElementById("modalConfetti");
 
 let audioContext;
 let melodyTimers = [];
@@ -143,15 +150,20 @@ function updateCountdown() {
   }
 
   Object.entries(units).forEach(([unit, value]) => {
-    const element = document.querySelector(`[data-unit="${unit}"]`);
+    const flipInner = document.querySelector(`.flip-box-inner [data-unit="${unit}"]`)?.closest(".flip-box-inner");
+    if (!flipInner) return;
+    const topSpan = flipInner.querySelector(".flip-top [data-unit=" + unit + "]");
+    const bottomSpan = flipInner.querySelector(".flip-bottom [data-unit=" + unit + "]");
+    if (!topSpan || !bottomSpan) return;
     const nextValue = String(value).padStart(2, "0");
 
-    if (element.textContent !== nextValue) {
-      element.classList.add("tick");
+    if (topSpan.textContent !== nextValue) {
+      flipInner.classList.add("tick");
       setTimeout(() => {
-        element.textContent = nextValue;
-        element.classList.remove("tick");
-      }, 120);
+        topSpan.textContent = nextValue;
+        bottomSpan.textContent = nextValue;
+        flipInner.classList.remove("tick");
+      }, 200);
     }
   });
 }
@@ -441,19 +453,32 @@ function confettiExplosion() {
 }
 
 function setupSurprise(fireworks, music) {
-  surpriseBtn.addEventListener("click", () => {
+  function triggerSurprise() {
     fireworks.celebrate();
     confettiExplosion();
     music.startMusic();
     document.body.classList.add("shake");
     wishModal.hidden = false;
+    spawnModalConfetti();
+
+    if (giftBox) giftBox.classList.add("opened");
 
     for (let i = 0; i < 28; i += 1) {
       setTimeout(() => createHeart(random(18, 82), random(74, 92), true), i * 45);
     }
 
     setTimeout(() => document.body.classList.remove("shake"), 460);
-  });
+  }
+
+  if (giftBox) {
+    giftBox.addEventListener("click", triggerSurprise);
+    giftBox.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        triggerSurprise();
+      }
+    });
+  }
 
   modalClose.addEventListener("click", () => {
     wishModal.hidden = true;
@@ -472,6 +497,119 @@ function setupCelebrateAgain(fireworks) {
   });
 }
 
+function spawnModalConfetti() {
+  if (!modalConfetti) return;
+  modalConfetti.innerHTML = "";
+  const colors = ["#f875aa", "#d9a441", "#d8c7ff", "#ffffff", "#ff8fbd"];
+
+  for (let i = 0; i < 30; i += 1) {
+    const particle = document.createElement("span");
+    particle.className = "modal-particle";
+    particle.style.left = `${random(10, 90)}%`;
+    particle.style.top = "0";
+    particle.style.background = colors[i % colors.length];
+    particle.style.animationDelay = `${random(0, 1.2)}s`;
+    particle.style.animationDuration = `${random(1.8, 3.2)}s`;
+    particle.style.width = `${random(4, 8)}px`;
+    particle.style.height = particle.style.width;
+    modalConfetti.appendChild(particle);
+  }
+}
+
+function setupSideNav() {
+  if (!sideNav) return;
+
+  const sections = document.querySelectorAll(".section[id]");
+  const dots = sideNav.querySelectorAll(".nav-dot");
+
+  /* Show nav after scrolling past hero */
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    sideNav.classList.toggle("visible", !entry.isIntersecting);
+  }, { threshold: 0.3 });
+
+  const hero = document.getElementById("top");
+  if (hero) heroObserver.observe(hero);
+
+  /* Track active section */
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute("id");
+        dots.forEach((dot) => {
+          dot.classList.toggle("active", dot.dataset.section === id);
+        });
+      }
+    });
+  }, { threshold: 0.3, rootMargin: "-20% 0px -20% 0px" });
+
+  sections.forEach((section) => sectionObserver.observe(section));
+
+  /* Smooth scroll on click */
+  dots.forEach((dot) => {
+    dot.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = document.getElementById(dot.dataset.section);
+      if (target) target.scrollIntoView({ behavior: "smooth" });
+    });
+  });
+}
+
+function setupLightbox() {
+  if (!galleryPhoto || !lightbox) return;
+
+  galleryPhoto.style.cursor = "pointer";
+  galleryPhoto.addEventListener("click", () => {
+    lightbox.hidden = false;
+    document.body.style.overflow = "hidden";
+  });
+
+  function closeLightbox() {
+    lightbox.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  lightboxClose.addEventListener("click", closeLightbox);
+  lightbox.querySelector(".lightbox-backdrop").addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !lightbox.hidden) closeLightbox();
+  });
+}
+
+function setupShare() {
+  if (!shareBtn) return;
+
+  shareBtn.addEventListener("click", async () => {
+    const shareData = {
+      title: "Happy Birthday Abhay & Ayansh",
+      text: "🎉 Happy Birthday Abhay & Ayansh! Two little stars, one special day. ❤️",
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (_) {
+        /* user cancelled */
+      }
+    } else {
+      /* Fallback: copy link */
+      try {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        shareBtn.textContent = "Copied!";
+        setTimeout(() => {
+          shareBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share Wish`;
+        }, 2000);
+      } catch (_) {
+        /* clipboard not available */
+      }
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   bootLoader();
   createBalloons();
@@ -485,6 +623,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const music = setupMusic();
   setupSurprise(fireworks, music);
   setupCelebrateAgain(fireworks);
+  setupSideNav();
+  setupLightbox();
+  setupShare();
   updateCountdown();
   setInterval(updateCountdown, 1000);
 
